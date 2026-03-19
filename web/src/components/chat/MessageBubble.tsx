@@ -1,4 +1,4 @@
-import { useState, useRef, memo, lazy, Suspense } from 'react';
+import { useState, memo, lazy, Suspense } from 'react';
 import { Copy, Check, ChevronDown, ChevronUp, Ellipsis, ImageDown } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -138,8 +138,6 @@ export const MessageBubble = memo(function MessageBubble({ message, showTime, th
   const [lightboxState, setLightboxState] = useState<{ images: string[]; index: number } | null>(null);
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
   const [showShareDialog, setShowShareDialog] = useState(false);
-  const touchTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
-  const touchStartPos = useRef({ x: 0, y: 0 });
   const currentUser = useAuthStore((s) => s.user);
   const appearance = useAuthStore((s) => s.appearance);
   const { mode: displayMode } = useDisplayMode();
@@ -197,33 +195,11 @@ export const MessageBubble = memo(function MessageBubble({ message, showTime, th
     setContextMenu({ x: e.clientX, y: e.clientY });
   };
 
-  const handleMenuButton = (e: React.MouseEvent | React.TouchEvent) => {
+  const handleMenuButton = (e: React.MouseEvent) => {
     e.stopPropagation();
     const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
     mediumTap();
     setContextMenu({ x: rect.left, y: rect.bottom + 4 });
-  };
-
-  const handleTouchStart = (e: React.TouchEvent) => {
-    const touch = e.touches[0];
-    touchStartPos.current = { x: touch.clientX, y: touch.clientY };
-    touchTimer.current = setTimeout(() => {
-      mediumTap();
-      setContextMenu({ x: touch.clientX, y: touch.clientY - 10 });
-    }, 500);
-  };
-
-  const handleTouchEnd = () => {
-    if (touchTimer.current) clearTimeout(touchTimer.current);
-  };
-
-  const handleTouchMove = (e: React.TouchEvent) => {
-    const touch = e.touches[0];
-    const dx = Math.abs(touch.clientX - touchStartPos.current.x);
-    const dy = Math.abs(touch.clientY - touchStartPos.current.y);
-    if (dx > 10 || dy > 10) {
-      if (touchTimer.current) clearTimeout(touchTimer.current);
-    }
   };
 
   // Context overflow system message
@@ -321,14 +297,14 @@ export const MessageBubble = memo(function MessageBubble({ message, showTime, th
       : (isOtherUser ? (message.sender_name || '用户') : (currentUser?.display_name || currentUser?.username || '我'));
 
     return (
-      <div className="group mb-2 border-b border-border pb-2" onContextMenu={handleContextMenu} onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd} onTouchMove={handleTouchMove}>
+      <div className="group mb-2 border-b border-border pb-2" onContextMenu={handleContextMenu}>
         {/* Sender line — no avatars in compact mode */}
         <div className="flex items-center gap-1.5 mb-1">
           <span className={`text-xs font-semibold ${isAI ? 'text-primary' : 'text-muted-foreground'}`}>{senderName}</span>
           {showTime && <span className="text-[11px] text-slate-400">{time}</span>}
           <button
             onClick={handleCopy}
-            className="ml-1 w-5 h-5 rounded flex items-center justify-center text-slate-300 hover:text-slate-600 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+            className="ml-1 w-5 h-5 rounded flex items-center justify-center text-slate-300 hover:text-slate-600 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity cursor-pointer"
             title="复制"
           >
             {copied ? <Check className="w-3 h-3 text-primary" /> : <Copy className="w-3 h-3" />}
@@ -386,7 +362,7 @@ export const MessageBubble = memo(function MessageBubble({ message, showTime, th
       const otherName = message.sender_name || '用户';
       const initial = otherName[0]?.toUpperCase() || '?';
       return (
-        <div className="group mb-4" onContextMenu={handleContextMenu} onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd} onTouchMove={handleTouchMove}>
+        <div className="group mb-4" onContextMenu={handleContextMenu}>
           <div className="flex items-center gap-2 mb-1.5 lg:hidden">
             <div className="w-6 h-6 rounded-full bg-slate-200 flex items-center justify-center text-xs font-medium text-slate-600 flex-shrink-0">
               {initial}
@@ -462,7 +438,7 @@ export const MessageBubble = memo(function MessageBubble({ message, showTime, th
     // User message (own): right-aligned
     const showSenderLabel = isShared;
     return (
-      <div className="group flex justify-end mb-4" onContextMenu={handleContextMenu} onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd} onTouchMove={handleTouchMove}>
+      <div className="group flex justify-end mb-4" onContextMenu={handleContextMenu}>
         <div className="flex flex-col items-end min-w-0 w-full">
           {showSenderLabel && (
             <span className="text-xs text-muted-foreground font-medium mb-1 mr-1">
@@ -532,7 +508,7 @@ export const MessageBubble = memo(function MessageBubble({ message, showTime, th
   const aiImageUrl = currentUser?.ai_avatar_url;
 
   return (
-    <div className="group mb-4" onContextMenu={handleContextMenu} onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd} onTouchMove={handleTouchMove}>
+    <div className="group mb-4" onContextMenu={handleContextMenu}>
       {/* Mobile: compact avatar + name row */}
       <div className="flex items-center gap-2 mb-1.5 lg:hidden">
         <EmojiAvatar imageUrl={aiImageUrl} emoji={aiEmoji} color={aiColor} fallbackChar={senderName[0]} size="sm" />
@@ -558,7 +534,7 @@ export const MessageBubble = memo(function MessageBubble({ message, showTime, th
             <div className="absolute top-2 right-2 flex items-center gap-0.5 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity">
               <button
                 onClick={() => setShowShareDialog(true)}
-                className="w-7 h-7 rounded-md flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-foreground/10 max-lg:hidden cursor-pointer"
+                className="w-7 h-7 rounded-md flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-foreground/10 cursor-pointer"
                 title="分享图片"
                 aria-label="生成分享图片"
               >
@@ -566,7 +542,7 @@ export const MessageBubble = memo(function MessageBubble({ message, showTime, th
               </button>
               <button
                 onClick={handleCopy}
-                className="w-7 h-7 rounded-md flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-foreground/10 max-lg:hidden cursor-pointer"
+                className="w-7 h-7 rounded-md flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-foreground/10 cursor-pointer"
                 title="复制"
                 aria-label="复制消息"
               >

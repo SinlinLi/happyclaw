@@ -319,7 +319,6 @@ pre code.hljs {
   /* 全局禁止双击缩放 */
   body {
     touch-action: manipulation;
-    -webkit-touch-callout: none;
   }
 
   /*
