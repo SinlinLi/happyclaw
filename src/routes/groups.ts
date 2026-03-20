@@ -1695,30 +1695,4 @@ groupRoutes.put('/:jid/mcp', authMiddleware, async (c) => {
   });
 });
 
-// POST /api/groups/:jid/stop - 停止工作区容器/进程（下次发送消息时自动重启）
-groupRoutes.post('/:jid/stop', authMiddleware, async (c) => {
-  const jid = c.req.param('jid');
-  const group = getRegisteredGroup(jid);
-  if (!group) return c.json({ error: 'Group not found' }, 404);
-
-  const authUser = c.get('user') as AuthUser;
-  if (!canAccessGroup({ id: authUser.id, role: authUser.role }, group)) {
-    return c.json({ error: 'Group not found' }, 404);
-  }
-
-  const deps = getWebDeps();
-  if (!deps) return c.json({ error: 'Server not initialized' }, 500);
-
-  try {
-    await deps.queue.stopGroup(jid);
-    return c.json({
-      success: true,
-      message: 'Container stopped. It will restart on the next message.',
-    });
-  } catch (err) {
-    logger.error({ jid, err }, 'Failed to stop group');
-    return c.json({ error: 'Failed to stop container' }, 500);
-  }
-});
-
 export default groupRoutes;
