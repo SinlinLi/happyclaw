@@ -105,6 +105,7 @@ export function ChatView({ groupJid, onBack, headerLeft }: ChatViewProps) {
   const agentStreaming = useChatStore(s => s.agentStreaming);
   const createConversation = useChatStore(s => s.createConversation);
   const renameConversation = useChatStore(s => s.renameConversation);
+  const reorderConversations = useChatStore(s => s.reorderConversations);
   const loadAgentMessages = useChatStore(s => s.loadAgentMessages);
   const refreshAgentMessages = useChatStore(s => s.refreshAgentMessages);
   const sendAgentMessage = useChatStore(s => s.sendAgentMessage);
@@ -529,6 +530,7 @@ export function ChatView({ groupJid, onBack, headerLeft }: ChatViewProps) {
         onCreateConversation={() => setShowNewConversation(true)}
         onBindIm={setBindingAgentId}
         onBindMainIm={!isHome ? () => setBindingAgentId(MAIN_BINDING) : undefined}
+        onReorder={(orderedIds) => reorderConversations(groupJid, orderedIds)}
       />
 
       {/* Main Content: Messages + Sidebar */}

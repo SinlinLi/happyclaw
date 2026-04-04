@@ -208,6 +208,7 @@ interface ChatState {
   deleteAgentAction: (jid: string, agentId: string) => Promise<boolean>;
   setActiveAgentTab: (jid: string, agentId: string | null) => void;
   // Conversation agent actions
+  reorderConversations: (jid: string, orderedIds: string[]) => void;
   createConversation: (jid: string, name: string, description?: string) => Promise<AgentInfo | null>;
   renameConversation: (jid: string, agentId: string, name: string) => Promise<boolean>;
   loadAgentMessages: (jid: string, agentId: string, loadMore?: boolean) => Promise<void>;
@@ -1834,8 +1835,26 @@ export const useChatStore = create<ChatState>((set, get) => ({
           nextSdkTaskAliases[alias] = target;
         }
 
+        // Apply saved conversation order from localStorage
+        let orderedAgents = visibleAgents;
+        try {
+          const savedOrder = localStorage.getItem(`happyclaw-agent-order-${jid}`);
+          if (savedOrder) {
+            const ids: string[] = JSON.parse(savedOrder);
+            const idIndex = new Map(ids.map((id, i) => [id, i]));
+            orderedAgents = [...visibleAgents].sort((a, b) => {
+              const ai = idIndex.get(a.id);
+              const bi = idIndex.get(b.id);
+              if (ai === undefined && bi === undefined) return 0;
+              if (ai === undefined) return 1;
+              if (bi === undefined) return -1;
+              return ai - bi;
+            });
+          }
+        } catch { /* ignore */ }
+
         return {
-          agents: { ...s.agents, [jid]: visibleAgents },
+          agents: { ...s.agents, [jid]: orderedAgents },
           sdkTasks: nextSdkTasks,
           sdkTaskAliases: nextSdkTaskAliases,
           agentStreaming: nextAgentStreaming,
@@ -1893,6 +1912,26 @@ export const useChatStore = create<ChatState>((set, get) => ({
   },
 
   // -- Conversation agent actions --
+
+  reorderConversations: (jid, orderedIds) => {
+    set((s) => {
+      const current = s.agents[jid] || [];
+      const idIndex = new Map(orderedIds.map((id, i) => [id, i]));
+      const sorted = [...current].sort((a, b) => {
+        const ai = idIndex.get(a.id);
+        const bi = idIndex.get(b.id);
+        if (ai === undefined && bi === undefined) return 0;
+        if (ai === undefined) return 1;
+        if (bi === undefined) return -1;
+        return ai - bi;
+      });
+      return { agents: { ...s.agents, [jid]: sorted } };
+    });
+    // Persist to localStorage
+    try {
+      localStorage.setItem(`happyclaw-agent-order-${jid}`, JSON.stringify(orderedIds));
+    } catch { /* ignore */ }
+  },
 
   createConversation: async (jid, name, description?) => {
     try {
